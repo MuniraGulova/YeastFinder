@@ -136,7 +136,7 @@ for select_model in models_dict:
 
     df_prediction_proba = pd.DataFrame(pred_proba, columns=['Not MIT/CYT (0)', 'MIT/CYT (1)'])
 
-    if st.button('Predicted'):
+    if st.button('Predicted', key=f'predict{select_model}'):
         with st.spinner('Have a good day :)! Predicting...'):
 
             progress_bar = st.progress(0)
@@ -146,7 +146,7 @@ for select_model in models_dict:
                 progress_bar.progress(i)
                 progress_text.text(f'Progress: {i}%')
 
-            st.subheader('Prediction')
+            st.subheader(f'Prediction for {select_model}')
             st.dataframe(
                 df_prediction_proba,
                 column_config={
