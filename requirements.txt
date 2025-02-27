@@ -1,0 +1,7 @@
+streamlit>=1.26.0
+pandas
+plotly
+matplotlib
+ucimlrepo
+scikit-learn
+seaborn
