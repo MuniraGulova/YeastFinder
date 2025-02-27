@@ -9,6 +9,8 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import roc_auc_score, roc_curve
 import seaborn as sns
+from sklearn.linear_model import LogisticRegression
+from sklearn.neighbors import KNeighborsClassifier
 
 yeast = fetch_ucirepo(id=110)
 X = yeast.data.features
@@ -42,6 +44,7 @@ with st.sidebar:
     pox = st.slider('pox', 0.0, 1.0, 0.6)
     vac = st.slider('vac', 0.0, 1.0, 0.9)
     nuc = st.slider('nuc', 0.0, 1.0, 0.3)
+    models = st.multiselect('Models ', ('Logistic Regression', 'KNN', 'Decision Tree'))
 
 st.subheader('Data Visualization')
 
@@ -88,7 +91,6 @@ input_data = {
     'nuc': nuc,
 }
 
-# забрала 5% для теста конечного результата)
 X_train, X_test, y_train, y_test = train_test_split(X, binary_target, test_size=0.2, random_state=42)
 
 st.plotly_chart(fig, use_container_width=True)
@@ -98,68 +100,73 @@ scaler = StandardScaler()
 X_train_scaled = scaler.fit_transform(X_train)
 X_test_scaled = scaler.transform(X_test)
 
-tree = DecisionTreeClassifier(random_state=42, max_depth=5)
-tree.fit(X_train_scaled, y_train)
+models_dict = {
+    'Logistic Regression': LogisticRegression(random_state=42),
+    'KNN': KNeighborsClassifier(n_neighbors=5),
+    'Decision Tree': DecisionTreeClassifier(random_state=42, max_depth=5)
+}
 
-input_df = pd.DataFrame(input_data, index=[0])
-input_scaled = scaler.transform(input_df)
+for select_model in models_dict:
+    model = models_dict[select_model]
+    model.fit(X_train_scaled, y_train)
 
-with st.expander('Input feature'):
-    st.write('*Input plugins*')
-    st.dataframe(input_df)
-    st.write('*Scaled data*')
-    st.dataframe(input_scaled)
+    input_df = pd.DataFrame(input_data, index=[0])
+    input_scaled = scaler.transform(input_df)
 
-st.subheader('Roc-Auc')
+    with st.expander('Input feature'):
+        st.write('*Input plugins*')
+        st.dataframe(input_df)
+        st.write('*Scaled data*')
+        st.dataframe(input_scaled)
 
-tree_proba = tree.predict_proba(X_test_scaled)[:, 1]
-tree_roc_auc = roc_auc_score(y_test, tree_proba)
-fpr, tpr, thesholds = roc_curve(y_test, tree_proba)
-plt.figure(figsize=(15, 7))
-plt.plot(fpr, tpr, color='blue', label=f"DecisionTreeClassifier auc: {tree_roc_auc}")
-plt.plot([0, 1], [0, 1], color='red', linestyle='--')
-plt.xlabel('False Positive Rate')
-plt.ylabel('True Positive Rate')
-plt.title('Roc-Auc curve')
-plt.legend(loc='lower right')
-st.pyplot(plt)
+    model_proba = model.predict_proba(X_test)[:, 1]
+    model_roc_auc = roc_auc_score(y_test, model_proba)
+    fpr, tpr, thesholds = roc_curve(y_test, model_proba)
 
-prediction = tree.predict(input_scaled)
-pred_proba = tree.predict_proba(input_scaled)
+    plt.figure(figsize=(8, 7))
+    plt.plot(fpr, tpr, color='blue', label=f'{select_model} AUC = {model_roc_auc}')
+    plt.plot([0, 1], [0, 1], color='red', linestyle='--')
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('Roc-Auc for 3 models')
+    plt.legend(loc='lower right')
+    st.pyplot(plt)
+    prediction = model.predict(input_scaled)
+    pred_proba = model.predict_proba(input_scaled)
 
-df_prediction_proba = pd.DataFrame(pred_proba, columns=['Not MIT/CYT (0)', 'MIT/CYT (1)'])
+    df_prediction_proba = pd.DataFrame(pred_proba, columns=['Not MIT/CYT (0)', 'MIT/CYT (1)'])
 
-if st.button('Predicted'):
-    with st.spinner('Have a good day :)! Predicting...'):
+    if st.button('Predicted'):
+        with st.spinner('Have a good day :)! Predicting...'):
 
-        progress_bar = st.progress(0)
-        progress_text = st.empty()
-        for i in range(101):
-            time.sleep(0.1)
-            progress_bar.progress(i)
-            progress_text.text(f'Progress: {i}%')
+            progress_bar = st.progress(0)
+            progress_text = st.empty()
+            for i in range(101):
+                time.sleep(0.1)
+                progress_bar.progress(i)
+                progress_text.text(f'Progress: {i}%')
 
-        st.subheader('Prediction')
-        st.dataframe(
-            df_prediction_proba,
-            column_config={
-                'Not MIT/CYT (0)': st.column_config.ProgressColumn(
-                    'Not MIT/CYT (0)',
-                    format='%.2f',
-                    width='medium',
-                    min_value=0,
-                    max_value=1,
-                ),
-                'MIT/CYT (1)': st.column_config.ProgressColumn(
-                    'MIT/CYT (1)',
-                    format='%.2f',
-                    width='medium',
-                    min_value=0,
-                    max_value=1,
-                )
-            },
-            hide_index=True
-        )
+            st.subheader('Prediction')
+            st.dataframe(
+                df_prediction_proba,
+                column_config={
+                    'Not MIT/CYT (0)': st.column_config.ProgressColumn(
+                        'Not MIT/CYT (0)',
+                        format='%.2f',
+                        width='medium',
+                        min_value=0,
+                        max_value=1,
+                    ),
+                    'MIT/CYT (1)': st.column_config.ProgressColumn(
+                        'MIT/CYT (1)',
+                        format='%.2f',
+                        width='medium',
+                        min_value=0,
+                        max_value=1,
+                    )
+                },
+                hide_index=True
+            )
 
-        result_label = 'MIT/CYT' if prediction == 1 else 'Other'
-        st.success(f"Predicted category: {result_label}")
+            result_label = 'MIT/CYT' if prediction == 1 else 'Other'
+            st.success(f"Predicted category: {result_label}")
