@@ -114,7 +114,7 @@ with st.expander('Input feature'):
     st.write('*Scaled data*')
     st.dataframe(input_scaled)
 
-for select_model in models_dict:
+for select_model in models:
     model = models_dict[select_model]
     model.fit(X_train_scaled, y_train)
 
