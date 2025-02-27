@@ -105,38 +105,38 @@ models_dict = {
     'KNN': KNeighborsClassifier(n_neighbors=5),
     'Decision Tree': DecisionTreeClassifier(random_state=42, max_depth=5)
 }
+input_df = pd.DataFrame(input_data, index=[0])
+input_scaled = scaler.transform(input_df)
+
+with st.expander('Input feature'):
+    st.write('*Input plugins*')
+    st.dataframe(input_df)
+    st.write('*Scaled data*')
+    st.dataframe(input_scaled)
 
 for select_model in models_dict:
     model = models_dict[select_model]
     model.fit(X_train_scaled, y_train)
 
-    input_df = pd.DataFrame(input_data, index=[0])
-    input_scaled = scaler.transform(input_df)
-
-    with st.expander('Input feature'):
-        st.write('*Input plugins*')
-        st.dataframe(input_df)
-        st.write('*Scaled data*')
-        st.dataframe(input_scaled)
-
-    model_proba = model.predict_proba(X_test)[:, 1]
+    model_proba = model.predict_proba(X_test_scaled)[:, 1]
     model_roc_auc = roc_auc_score(y_test, model_proba)
     fpr, tpr, thesholds = roc_curve(y_test, model_proba)
 
     plt.figure(figsize=(8, 7))
-    plt.plot(fpr, tpr, color='blue', label=f'{select_model} AUC = {model_roc_auc}')
+    plt.plot(fpr, tpr, label=f'{select_model} AUC = {model_roc_auc}')
     plt.plot([0, 1], [0, 1], color='red', linestyle='--')
     plt.xlabel('False Positive Rate')
     plt.ylabel('True Positive Rate')
     plt.title('Roc-Auc for 3 models')
     plt.legend(loc='lower right')
     st.pyplot(plt)
+
     prediction = model.predict(input_scaled)
     pred_proba = model.predict_proba(input_scaled)
 
     df_prediction_proba = pd.DataFrame(pred_proba, columns=['Not MIT/CYT (0)', 'MIT/CYT (1)'])
 
-    if st.button('Predicted', key=f'predict{select_model}'):
+    if st.button(f'Predicted {select_model}'):
         with st.spinner('Have a good day :)! Predicting...'):
 
             progress_bar = st.progress(0)
